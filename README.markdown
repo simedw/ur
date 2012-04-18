@@ -25,14 +25,10 @@ This is a normal usage scenario:
     % clang test.c 2>&1 | ur
         -lm
 
-and soon this will also work:
+To automatically rerun clang or gcc with the missing flags:
 
-    % ur-gcc test.c
-      error: undefined references to 'tanl'
-      missing libraries: -lm
-      rerunning
-      success
-
+    % ur -- clang test.c
+        reruning with missing flag : -lm
 Build
 =====
 

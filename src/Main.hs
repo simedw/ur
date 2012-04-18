@@ -24,6 +24,9 @@ import Data.Either
 import Control.Monad
 import Control.Applicative ((<$>),(<*), (*>), pure)
 
+
+import HSH hiding (space)
+
 data Options = Options  
     { optRebuildDatabase :: Bool
     , optAppendDatabase  :: Bool
@@ -89,34 +92,69 @@ modifyDatabase Options{..} | optAppendDatabase = do
                           >>= D.save optDatabaseDir
 
 
-listen :: Options -> IO ()
-listen (Options{..}) = do
-    input   <- BC.lines <$> B.getContents
-    let missing = nub . sort . concat $ map findMissingRef input
-
-    when (null missing) exitSuccess
-    db    <- D.load optDatabaseDir
-     
-    let (unresolved, found) = partitionEithers $ map (find db) missing
-    mapM_ (\library -> putStrLn ("-l" ++ BC.unpack library)) $ nub . sort . concat $ found
-    unless (null unresolved) $ do
-        putStr $ "The following defintion" ++ s unresolved ++ " eluded me: " 
-        putStrLn $ intercalate "," (map BC.unpack unresolved)
- 
+findRef :: Options -> [ByteString] -> IO (Maybe ([FunctionName],[LibraryName]))
+findRef (Options{..}) input = do
+    db <- D.load optDatabaseDir
+    if null missing
+        then return Nothing
+        else let (fns, libs) = partitionEithers . map (find db) $ missing 
+            in return $ Just (fns, nub . sort . concat $ libs)
   where
-    s :: [a] -> String
-    s xs | length xs > 1 = "s"
-    s xs | otherwise     = ""
+    missing = nub . sort . concat $ map findMissingRef input
     find db fname = maybe (Left fname) Right $ D.lookup fname db
     findMissingRef :: ByteString -> [FunctionName]
     findMissingRef str = concat $ map (f . (str =~)) pattern
       where 
       f :: (ByteString, ByteString, ByteString, [ByteString]) -> [ByteString]
       f (_,_,_,x) = x
+
 pattern =
     [ "undefined reference to `([_\\-a-zA-Z0-9]*)'"  -- gcc (ld)
     , "undefined reference to '([_\\-a-zA-Z0-9]*)'"  -- clang
     ]
+
+listen :: Options -> IO ()
+listen opt = do
+    input   <- BC.lines <$> B.getContents
+    refs <- findRef opt input
+    case refs of
+        Nothing                     -> exitSuccess
+        Just (unresolved, resolved) -> do
+            mapM_ (\library -> putStrLn ("-l" ++ BC.unpack library)) $ resolved
+            unless (null unresolved) $ do
+                putStr $ "The following defintion" ++ s unresolved ++ " eluded me: " 
+                putStrLn $ intercalate "," (map BC.unpack unresolved)
+
+
+s :: [a] -> String
+s xs | length xs > 1 = "s"
+s xs | otherwise     = ""
+
+toolMode :: Options -> [String] -> IO ()
+toolMode opt@(Options{..}) tool = do
+  (ss, cc) <- run cmd :: IO (String, IO (String, ExitCode))
+  (_,  ec) <- cc
+  case ec of
+    ExitSuccess   -> return ()
+    ExitFailure i -> do
+        refs <- findRef opt (BC.lines . BC.pack $ ss)
+        case refs of
+            Nothing                     -> exitFailure
+            Just (unresolved, resolved) | null unresolved -> do
+                putStr   $ "reruning with missing flag" ++ s resolved ++ " : " 
+                putStrLn $ intercalate "," (flags resolved)
+                run (cmdPlus resolved) :: IO ()
+                                    | otherwise       -> do
+                putStr   $ "missing flag" ++ s resolved ++ ": " 
+                putStrLn $ intercalate "," (flags resolved)
+                putStr   $ "unresolved flag" ++ s unresolved ++ ": "
+                putStrLn $ intercalate "," (map (BC.unpack) unresolved)
+  where 
+    cmd        = cmdPlus []
+    cmdPlus xs = intercalate " " tool ++ " "
+              ++ intercalate " " (flags xs)
+              ++ " 2>&1 " -- redirect stdout
+    flags      = map ((++) "-l" . BC.unpack)
 
 main = do
     args <- getArgs
@@ -134,5 +172,6 @@ main = do
         putStrLn "Done"
         exitSuccess
       else return ()
-    
-    listen opts
+    if null nonOptions
+        then listen opts
+        else toolMode opts nonOptions
