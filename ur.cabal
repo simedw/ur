@@ -1,0 +1,12 @@
+Name:                ur
+Version:             0.1
+Description:         Resolve undefined references
+Author:              Simon Edwardsson
+Maintainer:          simon.edwardsson@gmail.com
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+
+Executable ur
+  Main-is:           Main.hs
+  Build-Depends:     base, bytestring, regex-pcre, filepath, directory, parsec, cereal, containers, HSH >= 2.0
+  hs-source-dirs:    src
