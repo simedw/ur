@@ -1,17 +1,18 @@
 UR - undefined reference
 ========================
-Just a small project made for easily locating omitted libraries at link time.
+Just a small project for easily locating omitted libraries at link time.
 
 Usage
 =====
 
-The first the ur is used, the database needs to be rebuild
+The first time ur is used, the database needs to be rebuild
 
     % ur -r
 
-This will take a few minutes.
+This will take a few minutes depending on the number of libraries installed.
 
-This is a normal usage scenario:
+
+A normal usage scenario:
 
     % cat test.c
       #include <math.h>
