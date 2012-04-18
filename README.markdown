@@ -28,7 +28,7 @@ This is a normal usage scenario:
 To automatically rerun clang or gcc with the missing flags:
 
     % ur -- clang test.c
-        reruning with missing flag : -lm
+        rerunning with missing flag : -lm
 Build
 =====
 

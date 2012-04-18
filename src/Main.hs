@@ -141,7 +141,7 @@ toolMode opt@(Options{..}) tool = do
         case refs of
             Nothing                     -> exitFailure
             Just (unresolved, resolved) | null unresolved -> do
-                putStr   $ "reruning with missing flag" ++ s resolved ++ " : " 
+                putStr   $ "rerunning with missing flag" ++ s resolved ++ " : " 
                 putStrLn $ intercalate "," (flags resolved)
                 run (cmdPlus resolved) :: IO ()
                                     | otherwise       -> do
