@@ -30,6 +30,7 @@ import HSH hiding (space)
 data Options = Options  
     { optRebuildDatabase :: Bool
     , optAppendDatabase  :: Bool
+    , optRerunCommand    :: Bool
     , optDatabaseDir     :: String
     , optLibrarySrc      :: String
     }
@@ -41,14 +42,18 @@ options =
             (\arg opt -> return opt { optDatabaseDir = arg })
             "FILE")
         "Database path"
-    , Option "r" ["rebuild"]
+    , Option "c" ["create"]
         (NoArg
             (\opt -> return opt { optRebuildDatabase = True }))
-        "Rebuild database"
+        "Create new database"
     , Option "a" ["append"]
          (NoArg
             (\opt -> return opt { optAppendDatabase = True }))
         "Append to database"
+    , Option "r" ["rerun"]
+         (NoArg
+            (\opt -> return opt { optRerunCommand = True }))
+        "Rerun previous command with missing flags (used together with --)"
     , Option "s" ["libraries"]
         (ReqArg
             (\arg opt -> return opt { optLibrarySrc = arg})
@@ -61,7 +66,7 @@ options =
                 hPutStrLn stderr "Version 0.0.1"
                 exitWith ExitSuccess))
         "Print version"
- 
+
     , Option "h" ["help"]
         (NoArg
             (\_ -> do
@@ -79,6 +84,7 @@ defaultOptions = do
       , optAppendDatabase  = False
       , optDatabaseDir  = home </> ".ur_db"
       , optLibrarySrc   = "/usr/lib/"
+      , optRerunCommand = False
       }
 
 modifyDatabase :: Options -> IO ()
@@ -141,9 +147,14 @@ toolMode opt@(Options{..}) tool = do
         case refs of
             Nothing                     -> exitFailure
             Just (unresolved, resolved) | null unresolved -> do
-                putStr   $ "rerunning with missing flag" ++ s resolved ++ " : " 
-                putStrLn $ intercalate "," (flags resolved)
-                run (cmdPlus resolved) :: IO ()
+                case optRerunCommand of
+                    True -> do
+                        putStr   $ "rerunning with missing flag" ++ s resolved ++ " : " 
+                        putStrLn $ intercalate "," (flags resolved)
+                        run (cmdPlus resolved) :: IO ()
+                    False -> do
+                        putStr   $ "missing flag" ++ s resolved ++ ": " 
+                        putStrLn $ intercalate "," (flags resolved)
                                     | otherwise       -> do
                 putStr   $ "missing flag" ++ s resolved ++ ": " 
                 putStrLn $ intercalate "," (flags resolved)

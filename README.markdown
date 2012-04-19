@@ -5,9 +5,9 @@ Just a small project for easily locating omitted libraries at link time.
 Usage
 =====
 
-The first time ur is used, the database needs to be rebuild
+The first time ur is used, a database needs to be created
 
-    % ur -r
+    % ur -c
 
 This will take a few minutes depending on the number of libraries installed.
 
@@ -28,7 +28,7 @@ A normal usage scenario:
 
 To automatically rerun clang or gcc with the missing flags:
 
-    % ur -- clang test.c
+    % ur -r -- clang test.c
         rerunning with missing flag : -lm
 Build
 =====
